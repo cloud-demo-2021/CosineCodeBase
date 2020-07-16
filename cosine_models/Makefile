@@ -14,7 +14,7 @@ CPPFLAGS ?= $(INC_FLAGS) -MMD -MP
 CFLAGS = -O3 
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS) -lm
 
 # c source
 $(BUILD_DIR)/%.c.o: %.c
