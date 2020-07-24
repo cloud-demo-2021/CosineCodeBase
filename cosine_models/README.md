@@ -2,6 +2,7 @@
 
 ## Compiling
 In order to compile, you'll need to pre-install `make` and `gcc`. Then run,  
+`cd CosineCodeBase/cosine_models`.   
 `make clean`.  
 `make`.    
 
