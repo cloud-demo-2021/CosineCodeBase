@@ -529,7 +529,7 @@ void buildContinuum()
 		        evaluateConfiguration(i, VM_arr, mem_sum*1024*1024*1024, monthly_storage_cost, SLA_cost, compression_id);
 		        //printf("Done for configuration %d (%s)\n\n", config_id++, pricing_scheme);
 	   		}
-			fclose(fp);
+	   		//fclose(fp);
 			//printf("Done for %s\n", pricing_scheme);
 		}
 	}
