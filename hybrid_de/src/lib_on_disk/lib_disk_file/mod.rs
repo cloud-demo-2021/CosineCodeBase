@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::configuration::CONFIGURATION;
 use crate::lib_helper::{bytes_to_records, binary_search_fp};
 use crate::lib_template::{Record};
-use crate::metrics::{GET_IO_COUNTER};
+use crate::metrics::{GET_IO_COUNTER_FOR_READS, GET_IO_COUNTER_FOR_WRITES};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use bloom::{BloomFilter};
@@ -95,7 +95,7 @@ impl DiskFile {
             },
         };
         
-        GET_IO_COUNTER.inc();
+        GET_IO_COUNTER_FOR_READS.inc();
         let records = self.read_file(file_offset * CONFIGURATION.BLOCK_SIZE, CONFIGURATION.BLOCK_SIZE);
         //debug!("records are {:?}", records);
         let idx = records.binary_search_by_key(key, |record| record.key);

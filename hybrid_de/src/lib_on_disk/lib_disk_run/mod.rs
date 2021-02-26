@@ -54,9 +54,9 @@ impl Run {
         for i in 0..number_files {
             assert!(offset < size);
             let bytes_to_write = cmp::min(CONFIGURATION.FILE_SIZE, size - offset);
-            let filename = generate_filename(level, run, i);
+            let mut filename: &str = &format!("{}{}", CONFIGURATION.DB_PATH, generate_filename(level, run, i));
             debug!("creating file from create run {} in level {} run {} size is {}", filename, level, run, bytes_to_write);
-            files.push(Arc::new(DiskFile::create_disk_file(filename, &data[offset..offset + bytes_to_write], bytes_to_write, SystemTime::now())));
+            files.push(Arc::new(DiskFile::create_disk_file(filename.to_string(), &data[offset..offset + bytes_to_write], bytes_to_write, SystemTime::now())));
             
             let key = i32::from_be_bytes(data[offset..offset + CONFIGURATION.KEY_SIZE].try_into().unwrap());
             fence_pointers.push(key);

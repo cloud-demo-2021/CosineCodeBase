@@ -9,7 +9,7 @@ use super::lib_template::{Record};
 use super::lib_helper::{generate_filename};
 use super::lib_on_disk::lib_disk_file::{DiskFile};
 use super::lib_on_disk::lib_disk_run::{Run};
-use crate::metrics::{PUT_IO_COUNTER};
+use crate::metrics::{GET_IO_COUNTER_FOR_WRITES, PUT_IO_COUNTER};
 
 use atomic_counter::AtomicCounter;
 
@@ -52,6 +52,7 @@ pub fn merge_from_files(mut files_to_merge: Vec<Vec<Arc<DiskFile>>>, run_merge_i
     let mut runs_to_merge = Vec::new();
     for i in 0..files_to_merge.len() {
         let file_records = files_to_merge[i][0].read_all_file_records();
+        GET_IO_COUNTER_FOR_WRITES.inc_by((files_to_merge[i][0].size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
         PUT_IO_COUNTER.inc_by((files_to_merge[i][0].size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
         let first = file_records[0].clone();
         files_to_merge[i].remove(0);
@@ -67,6 +68,7 @@ pub fn merge_from_files(mut files_to_merge: Vec<Vec<Arc<DiskFile>>>, run_merge_i
         }
         if next_ele_idx == runs_to_merge[run_idx].len() && files_to_merge[run_idx].len() > 0 {
             runs_to_merge[run_idx] = files_to_merge[run_idx][0].read_all_file_records();
+            GET_IO_COUNTER_FOR_WRITES.inc_by((files_to_merge[run_idx][0].size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
             PUT_IO_COUNTER.inc_by((files_to_merge[run_idx][0].size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
             files_to_merge[run_idx].remove(0);
             next_ele_idx = 0;
@@ -78,16 +80,20 @@ pub fn merge_from_files(mut files_to_merge: Vec<Vec<Arc<DiskFile>>>, run_merge_i
             heap.push(new_node);
         } 
         if merged_runs.len() == CONFIGURATION.FILE_SIZE {
-            let merged_file = DiskFile::create_disk_file(generate_filename(run_merge_into.level, run_merge_into.run, run_merge_into.file_counter.get()), &merged_runs, merged_runs.len(), ts);
+            let mut filename: &str = &format!("{}{}", CONFIGURATION.DB_PATH, generate_filename(run_merge_into.level, run_merge_into.run, run_merge_into.file_counter.get()));
+            let merged_file = DiskFile::create_disk_file(filename.to_string(), &merged_runs, merged_runs.len(), ts);
+            GET_IO_COUNTER_FOR_WRITES.inc_by((merged_file.size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
             PUT_IO_COUNTER.inc_by((merged_file.size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
-            debug!("creating file {} in merge", &merged_file.filename);
+            debug!("creating file {} in merge", &merged_file.filename.to_string());
             merged_files.push(Arc::new(merged_file));
             run_merge_into.file_counter.inc();
             merged_runs.clear();
         } 
     }
     if merged_runs.len() > 0 {
-        let merged_file = DiskFile::create_disk_file(generate_filename(run_merge_into.level, run_merge_into.run, run_merge_into.file_counter.get()), &merged_runs, merged_runs.len(), ts);
+        let mut filename: &str = &format!("{}{}", CONFIGURATION.DB_PATH, generate_filename(run_merge_into.level, run_merge_into.run, run_merge_into.file_counter.get()));
+        let merged_file = DiskFile::create_disk_file(filename.to_string(), &merged_runs, merged_runs.len(), ts);
+        GET_IO_COUNTER_FOR_WRITES.inc_by((merged_file.size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
         PUT_IO_COUNTER.inc_by((merged_file.size as f64 / CONFIGURATION.BLOCK_SIZE as f64).ceil() as i64);
         debug!("creating file {} in merge", &merged_file.filename);
         merged_files.push(Arc::new(merged_file));

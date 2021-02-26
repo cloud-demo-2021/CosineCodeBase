@@ -42,17 +42,23 @@ pub struct Configuration {
     pub PC_FREQUENCY: usize,
     
 	// we eventually want to change this(?) with Monkey
-	pub BF_BITS_PER_ENTRY: usize,
+    pub BF_BITS_PER_ENTRY: usize,
+    
+    // indicates if it is a flat log or not
+    pub FLAT_STRUCTURE: i8,
+
+    // DB Path
+    pub DB_PATH: String,
 }
 
 impl Default for Configuration {
     fn default() -> Self {
         Configuration {
             BLOCK_SIZE: 4096, // 4 KB 
-            FILE_SIZE: 32 * 1024, // 1 MB
+            FILE_SIZE: 1 * 1024 * 1024, // 1 MB
             KEY_SIZE: 4,
             RECORD_SIZE: 32, // 4+4 byte
-            BUFFER_CAPACITY: 32 * 1024, // 1 MB
+            BUFFER_CAPACITY: 1 * 1024 * 1024, // 1 MB
             SIZE_RATIO: 4, 
             RUNS_PER_LEVEL: 1,
             RUNS_LAST_LEVEL: 1,
@@ -68,6 +74,8 @@ impl Default for Configuration {
             FULL_COMPACTION_LEVELS: 1,
             PC_FREQUENCY: 1000, // in ms
             BF_BITS_PER_ENTRY: 10,
+            FLAT_STRUCTURE: 0,
+            DB_PATH: "DB/".to_string(),
         }
     }
 }

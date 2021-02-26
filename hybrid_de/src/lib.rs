@@ -13,3 +13,4 @@ pub mod lib_test;
 pub mod lib_on_disk;
 pub mod lib_merge;
 pub mod lib_lsm_tree;
+pub mod lib_lsh_table;

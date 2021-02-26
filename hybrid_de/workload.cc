@@ -32,7 +32,7 @@ using namespace std;
 
 unsigned long long min_U = -2147483648;
 unsigned long long max_U = 2147483647;
-unsigned long long N = 10000000;
+unsigned long long N = 1000000;
 //unsigned long long U = pow(10, 10);
 FILE *fp_bulk = fopen("src/bulkwrite.txt", "w");
 FILE *fp_wl = fopen("src/workload.txt", "w");
@@ -42,8 +42,9 @@ std::vector<unsigned long long> values;
 //std::vector<uint64_t> values_special;
 //std::vector<uint64_t> keys_normal;
 //std::vector<uint64_t> values_normal;
-unsigned long long no_of_puts = 10000000;
-unsigned long long no_of_gets = 100000;
+unsigned long long no_of_puts = 100000; // blind writes (inserts or updates)
+unsigned long long no_of_gets = 100000; // point reads
+unsigned long long no_of_rmws = 0; // read-modify-writes
 unsigned long long no_of_ranges = 0;
 unsigned long long range_length = 8000000;
 
@@ -98,6 +99,21 @@ void generatePutUniform(bool print) {
             std::cout << key << ", " << val << std::endl;
         }
        	fprintf (fp_wl, "p %d %d\n", (int)key, (int)val);
+    }
+}
+
+void generateRMWUniform(bool print) {
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+    std::mt19937_64 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+    uniform_int_distribution<unsigned long long> uni_dist1(0, keys.size()-1U); 
+    for(int i=1;i<=no_of_rmws;i++)
+    {
+		unsigned long long index = uni_dist1(gen);
+    	unsigned long long key = keys[index];
+        if (print) {
+            std::cout << key << "++ " << std::endl;
+        }
+       	fprintf (fp_wl, "m %d\n", (int)key);
     }
 }
 
@@ -305,7 +321,8 @@ int main(int argc, char* argv[])
 		printf("UNIFORM\n");
 		generateKeysUniform(true, false); 
 		generateGetUniform(false);
-		generatePutUniform(false);
+		generatePutUniform(false); 
+		generateRMWUniform(false);
 		generateRangeUniform(false);
 	}
 	else

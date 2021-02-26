@@ -11,6 +11,10 @@ use std::fs::File;
 use std::time::{Instant};
 use std::sync::{Arc};
 use atomic_counter::{AtomicCounter};
+use std::time::{SystemTime};
+use std::process::Command;
+use std::fs;
+
 //use std::collections::HashMap;
 use threadpool::ThreadPool;
 use super::configuration::CONFIGURATION;
@@ -18,11 +22,13 @@ use super::lib_template::{Record};
 //use super::lib_workload;
 //use super::lib_in_memory;
 use super::lib_lsm_tree::LSMTree;
+use super::lib_lsh_table::LSHTable;
+use super::lib_lsh_table::lib_disk_file::DiskFile;
 use super::lib_on_disk::lib_disk_level::DiskLevel;
 use super::lib_on_disk::lib_disk_run::Run;
 
 use prometheus::{TextEncoder, Encoder};
-use crate::metrics::{GET_IO_COUNTER, PUT_IO_COUNTER};
+use crate::metrics::{GET_IO_COUNTER_FOR_READS, GET_IO_COUNTER_FOR_WRITES, PUT_IO_COUNTER};
 
 pub fn parse_instruction(mut _instruction: String) -> (String, i32, String)
 {
@@ -96,25 +102,63 @@ pub fn run(bulkwrite_file: &String, workload_file: &String) {
 }
 
 pub fn run_with_time(bulkwrite_file: &String, workload_file: &String) {
-	let mut lsm_tree: LSMTree = LSMTree::create_lsmtree();
-	bulkwrite(bulkwrite_file, &mut lsm_tree);
-	//run_file_for_benchmark(bulkwrite_file, &mut lsm_tree);
-	let start = Instant::now();
-	run_file_for_benchmark(workload_file, lsm_tree);
-	let duration = start.elapsed();
-	println!("Time elapsed is: {:?}", duration);
 
-	// output metrics
-    let mut buffer = Vec::new();
-    let encoder = TextEncoder::new();
+	// Create the DB directory if it doesn't exist and clean it as one may exist already
+	fs::create_dir_all(&CONFIGURATION.DB_PATH);
+		Command::new("sh")
+            .arg("-c")
+            .arg(format!("rm {}*", CONFIGURATION.DB_PATH))
+            .output()
+			.expect("failed to execute process");
 
-    // Gather the metrics.
-    let metric_families = prometheus::gather();
-    // Encode them to send.
-    encoder.encode(&metric_families, &mut buffer).unwrap();
+	if CONFIGURATION.FLAT_STRUCTURE == 1
+	{
+		println!("Design: LSH-Table");
 
-    let output = String::from_utf8(buffer.clone()).unwrap();
-	println!("{}", output);
+		let mut lshtable: LSHTable = LSHTable::create_lshtable();
+		bulkwriteLSH(bulkwrite_file, &mut lshtable);
+		lshtable.print_stats();
+
+		let start = Instant::now();
+		run_file_for_benchmark_LSH(workload_file, lshtable);
+		let duration = start.elapsed();
+		println!("Time elapsed is: {:?}", duration);
+
+		// output metrics
+		let mut buffer = Vec::new();
+		let encoder = TextEncoder::new();
+
+		// Gather the metrics.
+		let metric_families = prometheus::gather();
+		// Encode them to send.
+		encoder.encode(&metric_families, &mut buffer).unwrap();
+
+		let output = String::from_utf8(buffer.clone()).unwrap();
+		println!("{}", output);
+	}
+	else
+	{
+		println!("Design: LSM-Tree");
+		let mut lsm_tree: LSMTree = LSMTree::create_lsmtree();
+		bulkwrite(bulkwrite_file, &mut lsm_tree);
+		//run_file_for_benchmark(bulkwrite_file, &mut lsm_tree);
+		let start = Instant::now();
+		run_file_for_benchmark(workload_file, lsm_tree);
+		let duration = start.elapsed();
+		println!("Time elapsed is: {:?}", duration);
+
+		// output metrics
+		let mut buffer = Vec::new();
+		let encoder = TextEncoder::new();
+
+		// Gather the metrics.
+		let metric_families = prometheus::gather();
+		// Encode them to send.
+		encoder.encode(&metric_families, &mut buffer).unwrap();
+
+		let output = String::from_utf8(buffer.clone()).unwrap();
+		println!("{}", output);
+	}
 }
 
 // Useful for checking behavior of LSM Tree
@@ -166,7 +210,8 @@ pub fn run_file(_workload_file: &String, lsm_tree: LSMTree) {
 pub fn run_file_for_benchmark(_workload_file: &String, lsm_tree: LSMTree) {
 	let pool = ThreadPool::new(CONFIGURATION.CPUS - CONFIGURATION.COMPACTION_THREADS);
 
-	GET_IO_COUNTER.reset();
+	GET_IO_COUNTER_FOR_READS.reset();
+	GET_IO_COUNTER_FOR_WRITES.reset();
 	PUT_IO_COUNTER.reset();
 	//PC_LEVELS_COUNTER.reset();
 
@@ -203,6 +248,18 @@ pub fn run_file_for_benchmark(_workload_file: &String, lsm_tree: LSMTree) {
 		pool.execute(move || {
 			match op_code.trim() {
 				"b" | "p" => lsm_tree.put(&key, &value),
+				"m" => {
+					match lsm_tree.get(&key)
+					{
+						Some(value) => {
+							let val: i32 = (value.trim()).parse::<i32>().unwrap() + 1;
+							lsm_tree.put(&key, &val.to_string());
+					    }
+					    _ => {
+					        error!("ERROR, KEY FOR RMW OPCODE NOT FOUND");
+					    },
+					}
+				}
 				"r" => {
 					let _range = lsm_tree.find_range(&key, &value.parse::<i32>().unwrap());
 				}
@@ -221,6 +278,54 @@ pub fn run_file_for_benchmark(_workload_file: &String, lsm_tree: LSMTree) {
 	println!("tail latency is {}", max_time);
 	//check_tree_metadata(&lsm_tree);
 	lsm_tree.delete_files();
+}
+
+pub fn run_file_for_benchmark_LSH(_workload_file: &String, lsh_table: LSHTable) {
+	let pool = ThreadPool::new(CONFIGURATION.CPUS);
+
+	GET_IO_COUNTER_FOR_READS.reset();
+	GET_IO_COUNTER_FOR_WRITES.reset();
+	PUT_IO_COUNTER.reset();
+
+	let wl = File::open(_workload_file).expect("Error in opening workload file!");
+	let wl = BufReader::new(wl);
+	let lsh_table = Arc::new(lsh_table);
+
+	let mut max_time = 0;
+    for line in wl.lines() {
+		let lsh_table = lsh_table.clone();
+		let (op_code, key, value) = parse_instruction(line.unwrap());
+		let start = Instant::now();
+		pool.execute(move || {
+			match op_code.trim() {
+				"b" | "p" => lsh_table.put(&key, &value),
+				"m" => {
+						// match lsh_table.get(&key)
+						// {
+						// 	Some(value) => {
+						// 		let val: i32 = (value.trim()).parse::<i32>().unwrap() + 1;
+						// 		lsh_table.put(&key, &val.to_string());
+                        //     }
+                        //     _ => {
+                        //         error!("ERROR, KEY FOR RMW OPCODE NOT FOUND");
+                        //     },
+						// }
+						lsh_table.read_modify_write(&key);
+					}
+				"r" => { println!("Range not supported");}
+				"g" => {
+					let mut val = 0;
+					lsh_table.get(&key);
+				}
+				//"d" => lsm_tree.delete(&key),
+				_ => error!("ERROR, BAD OPCODE")
+			}
+		});
+		let duration = start.elapsed();
+		max_time = std::cmp::max(max_time, duration.as_micros());
+	}
+	pool.join();
+	println!("tail latency is {}", max_time);
 }
 
 fn create_record_from_line(line: Result<String, Error>) -> Record {
@@ -264,6 +369,36 @@ pub fn bulkwrite(bulkwrite_file: &String, lsm_tree: &mut LSMTree) {
 		debug!("run counter at level {} is {}", level, levels[level - 1].run_counter.get());
 		levels[level - 1].add_size(current.len() * CONFIGURATION.RECORD_SIZE);
 		run = (run + 1) % CONFIGURATION.RUNS_PER_LEVEL;
+		records_read += records_to_read;
+	}
+	assert!(records_read == num_records);
+}
+
+pub fn bulkwriteLSH(bulkwrite_file: &String, lsh_table: &mut LSHTable) {
+	let br = File::open(bulkwrite_file).expect("Error in opening bulkwrite file!");
+	let br = BufReader::new(br);
+	let v = &mut br.lines().map(|l| create_record_from_line(l)).collect::<Vec<_>>();
+	v.sort();
+	let num_records = v.len();
+	let num_records_per_file = CONFIGURATION.FILE_SIZE / CONFIGURATION.RECORD_SIZE;
+	debug!("Records per file: {:?}", num_records_per_file);
+	let mut records_read = 0;
+	while records_read < num_records {
+		let records_to_read = std::cmp::min(num_records - records_read, num_records_per_file);
+		let current = &mut v[records_read..records_read + records_to_read].to_vec();
+		current.dedup_by(|a, b| a.key == b.key);
+		let mut files = lsh_table.files.write();
+		let max_file_id = files.len();
+		let mut filename: &str = &format!("{}{}", CONFIGURATION.DB_PATH, generate_filename(0, 0, max_file_id as usize));
+		let written_file = DiskFile::create_disk_file(filename.to_string(), &records_to_bytes(current), records_to_bytes(current).len(), SystemTime::now());
+		files.push(written_file);
+
+		// create the hash index
+		let mut index = lsh_table.index.write();
+		for _record in current.iter()
+		{
+			index.insert(_record.key.into(), files.len()-1);
+		}
 		records_read += records_to_read;
 	}
 	assert!(records_read == num_records);
