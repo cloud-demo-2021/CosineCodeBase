@@ -15,8 +15,9 @@ typedef struct continuum_design
 	int Z;
 	int L;
 	int Y;
+	int C;
 	double M, M_B, M_BC, M_F, M_FP, M_BF, FPR_sum;
-	double update_cost, read_cost, short_scan_cost, long_scan_cost, total_cost;
+	double update_cost, read_cost, rmw_cost, blind_update_cost, short_scan_cost, long_scan_cost, long_scan_empty_cost, total_cost;
 	double data_VM, workload_VM;
 	int compression_id;
 	char* msg;

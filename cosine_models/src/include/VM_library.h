@@ -8,6 +8,7 @@ typedef struct VM_library
 	char** name_of_instance;
 	double* mem_of_instance; // GB
 	double* rate_of_instance; // hourly price
+	int* vCPU_of_instance; // number of vCPUs
 
 }VM_library;
 VM_library* VM_libraries;

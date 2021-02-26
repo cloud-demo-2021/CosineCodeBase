@@ -8,6 +8,23 @@
 #include "include/environment_variable.h"
 
 
+void getNoOfLevelsWacky(int* L, double M_B, int T, double data, int C)
+{	
+	if(M_B == 0)
+	{
+		printf("ERROR!!!! Buffer memory should never be set to 0.");
+		*L = 0; // This is not really true. If 
+	}
+	else
+	{
+		double multiplier_from_buffer = data*((double)E) / (M_B);
+		// handle case where data fits in buffer
+		if (multiplier_from_buffer < 1) multiplier_from_buffer = 1;
+		*L = (int)ceil(log(multiplier_from_buffer * (T-1) / (C+1))/log(T));
+	}
+}
+
+
 void getNoOfLevels(int* L, double M_B, int T, double data)
 {	
 	if(M_B == 0)
@@ -39,6 +56,7 @@ void getNoOfLevelsAvgCase(int* L, double M_B, int T, double data)
 void getX(double* X, int T, int K, int Z)
 {
 	*X = (((double)log(T)/(T-1)) + (double)(double)(log(K) - log(Z))/T)/(2*log(2))*8; // convert to bits
+	*X = (((double)log(T)/(T-1)) + (double)(double)(log(K) - log(Z))/T)/(pow(log(2),2))*8; // convert to bits
 	if(*X < 0)
 		*X = 0;
 }

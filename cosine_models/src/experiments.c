@@ -47,7 +47,8 @@ void printContinuumExistingSystem()
 			 		//printf("Got: %f\t%f for %d\n", down->cost, down->latency, down->provider_id);
 			 		if(down->provider_id == 0)
 			 		{
-			 			printf("%f\t%f\n", down->cost, down->latency/(3600));
+			 			printf("%f\t%f\t%f\n", down->cost, down->mem_sum/(1024*1024*1024), down->latency/(3600));
+						// printContinuumNode(down);
 			 			looking_for += step;
 			 			break;
 			 		}
@@ -106,7 +107,7 @@ void printContinuumCosine(bool entire)
 							printf("%s ", best->VM_design_arr[i]->msg);
 						}
 					}
-					//printContinuumNode(best);
+					// printContinuumNode(best);
 					if(enable_performance_window)
 					{
 						for(int i = 0;i<VM_libraries[best->provider_id].no_of_instances;i++)
@@ -130,7 +131,7 @@ void printContinuumCosine(bool entire)
 }
 
 
-
+// Wacky optimizations not added here!
 void getBestAndWorstCase(int provider_id, int T, int K, int Z, int L, int Y, double M, double M_F, double M_B, double M_BF, double data, double workload_VM)
 {
 	long double storage = ((double)(N)/(1024*1024*1024))*E;
@@ -191,8 +192,8 @@ void getBestAndWorstCase(int provider_id, int T, int K, int Z, int L, int Y, dou
 	consider_partial_last_level = true;
 	double FPR_sum=1.0;
 	double update_cost = 0.0, avg_read_cost = 0.0, total_cost = 0.0;
-	analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data);
-	analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data);
+	analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data, -1);
+	analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data, -1);
 	total_cost = (write_percentage * workload_VM * update_cost/100) + (read_percentage * avg_read_cost * workload_VM/100);
 	printf("B: %f %f %f ", avg_read_cost, update_cost, total_cost/(IOPS * 3600));
 	consider_partial_last_level = false;
@@ -201,8 +202,8 @@ void getBestAndWorstCase(int provider_id, int T, int K, int Z, int L, int Y, dou
 	consider_partial_buffer = true;
 	update_cost = 0.0, avg_read_cost = 0.0, total_cost = 0.0;
 	FPR_sum=1.0;
-	analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data);
-	analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data);
+	analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data, -1);
+	analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data, -1);
 	total_cost = (write_percentage * workload_VM * update_cost/100) + (read_percentage * avg_read_cost * workload_VM/100);
 	//printf("W: %f %f %f ", avg_read_cost, update_cost, total_cost/(IOPS * 3600));
 	consider_partial_buffer = false;
@@ -213,13 +214,13 @@ void getBestAndWorstCase(int provider_id, int T, int K, int Z, int L, int Y, dou
 	FPR_sum=1.0;
 	if(T%32 == 0) // For B-trees avg-case and worst-case are close
 	{
-		analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data);
-		analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data);
+		analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data, -1);
+		analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data, -1);
 	}
 	else if (Z == 0 || Z == -1) // for LSH-tables, worst-case reads are close to avg-case
 	{
-		analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data);
-		analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data);
+		analyzeReadCostAvgCase(&avg_read_cost, &FPR_sum, T, K, Z, L, Y, M, M_B, 0, M_F, M_BF, data, -1);
+		analyzeUpdateCostAvgCase(&update_cost, T, K, Z, L, Y, M, M_F, M_B, data, -1);
 	}
 	else
 	{

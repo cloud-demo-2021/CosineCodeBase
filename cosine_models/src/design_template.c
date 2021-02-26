@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include <time.h>
 #include<math.h>
+#include <string.h>
 
 #include "include/environment_variable.h"
 #include "include/design_template.h"
@@ -12,7 +13,7 @@
 #include "include/index.h"
 
 
-design* newDesign(int T, int K, int Z, int D, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double short_scan_cost, double long_scan_cost, char* msg)
+design* newDesign(int T, int K, int Z, int D, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double rmw_cost, double blind_update_cost, double short_scan_cost, double long_scan_cost, char* msg)
 {
 	design* newnode = (design*)malloc(sizeof(design));
 	newnode->T = T;
@@ -31,9 +32,11 @@ design* newDesign(int T, int K, int Z, int D, int L, int Y, double M, double M_B
 	newnode->FPR_sum = FPR_sum;
 	newnode->update_cost = update_cost;
 	newnode->read_cost = read_cost;
+	newnode->rmw_cost = rmw_cost;
+	newnode->blind_update_cost = blind_update_cost;
 	newnode->short_scan_cost = short_scan_cost;
 	newnode->long_scan_cost = long_scan_cost;
-	newnode->total_cost = (write_percentage*query_count*update_cost/100) + (read_percentage*read_cost*query_count/100) + (short_scan_percentage*short_scan_cost*query_count/100) + (long_scan_percentage*long_scan_cost*query_count/100);
+	newnode->total_cost = (write_percentage*query_count*update_cost/100) + (read_percentage*read_cost*query_count/100) + (rmw_percentage*newnode->rmw_cost*query_count/100) + (blind_update_percentage*newnode->blind_update_cost*query_count/100) + (short_scan_percentage*short_scan_cost*query_count/100) + (long_scan_percentage*long_scan_cost*query_count/100);
 	newnode->next = NULL;
 	newnode->down = NULL;
 	newnode->msg = msg;
@@ -97,12 +100,12 @@ void showDesigns(design** d_list)
 	}
 }
 
-void logUpdateCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double update_cost, double read_cost, double short_scan_cost, double long_scan_cost, char* msg)
+void logUpdateCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double update_cost, double read_cost, double rmw_cost, double blind_update_cost, double short_scan_cost, double long_scan_cost, char* msg)
 {
 	//printf("\n%f\t%f", total_budget, update_cost);
 	design* temp = *d_list, *temp1=NULL;
 	design* previous = NULL;
-	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, 0.0, update_cost, read_cost, short_scan_cost, long_scan_cost, msg);
+	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, 0.0, update_cost, read_cost, rmw_cost, blind_update_cost, short_scan_cost, long_scan_cost, msg);
 	//printf("\nlogged %f", update_cost);
 	if(!*d_list)
 	{
@@ -145,11 +148,11 @@ void logUpdateCost(design** d_list, int T, int K, int Z, int L, int Y, double M,
 	}
 }
 
-void logReadCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double short_scan_cost, double long_scan_cost, char* msg)
+void logReadCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double rmw_cost, double blind_update_cost, double short_scan_cost, double long_scan_cost, char* msg)
 {
 	design* temp = *d_list, *temp1=NULL;
 	design* previous = NULL;
-	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, FPR_sum, update_cost, read_cost, short_scan_cost, long_scan_cost, msg);
+	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, FPR_sum, update_cost, read_cost, rmw_cost, blind_update_cost, short_scan_cost, long_scan_cost, msg);
 	if(!*d_list)
 	{
 		*d_list = new_design;
@@ -191,7 +194,7 @@ void logReadCost(design** d_list, int T, int K, int Z, int L, int Y, double M, d
 	}
 }
 
-void logTotalCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double avg_read_cost, double no_result_cost, double short_scan_cost, double long_scan_cost, double avg_cpu_cost, double no_result_cpu_cost, char* msg)
+void logTotalCost(design** d_list, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_F_HI, double M_F_LO, double M_FP, double M_BF, double FPR_sum, double update_cost, double read_cost, double avg_read_cost, double rmw_cost, double blind_update_cost, double no_result_cost, double short_scan_cost, double long_scan_cost, double avg_cpu_cost, double no_result_cpu_cost, char* msg)
 {
 	design* temp = *d_list, *temp1=NULL;
 	design* previous = NULL;
@@ -207,8 +210,8 @@ void logTotalCost(design** d_list, int T, int K, int Z, int L, int Y, double M, 
 		read = read_cost;
 	}
 
-	double total_cost = (write_percentage*query_count*update_cost/100) + (read_percentage*read*query_count/100) + (short_scan_percentage*short_scan_cost*query_count/100) + (long_scan_percentage*long_scan_cost*query_count/100);
-	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, FPR_sum, update_cost, read, short_scan_cost, long_scan_cost, msg);
+	double total_cost = (write_percentage*query_count*update_cost/100) + (read_percentage*read*query_count/100) + (rmw_percentage*query_count*rmw_cost/100) + (blind_update_percentage*query_count*blind_update_cost/100) + (short_scan_percentage*short_scan_cost*query_count/100) + (long_scan_percentage*long_scan_cost*query_count/100);
+	design* new_design = newDesign(T, K, Z, 1, L, Y, M, M_B, M_F, M_F_HI, M_F_LO, M_FP, M_BF, FPR_sum, update_cost, read, rmw_cost, blind_update_cost, short_scan_cost, long_scan_cost, msg);
 	if(!*d_list)
 	{
 		*d_list = new_design;
@@ -310,14 +313,14 @@ void getBestDesign(design** d_list)
 
 	printf("scenario:%c\n", scenario);
 	if (workload_type == 0) {
-		printf("N:%ld, U:%f, read_percentage:%f, write_percentage:%f, long_scan_percentage:%f\n", N, U, read_percentage, write_percentage, long_scan_percentage);
+		printf("N:%ld, U:%f, read_percentage:%f, write_percentage:%f, rmw_percentage:%f, blind_update_percentage:%f long_scan_percentage:%f\n", N, U, read_percentage, write_percentage, rmw_percentage, blind_update_percentage, long_scan_percentage);
 	}
 	if (workload_type == 1) {
-		printf("N:%ld, U_1:%f, U_2:%f, p_put:%f, p_get:%f, read_percentage:%f, write_percentage:%f, long_scan_percentage:%f\n", N, U_1, U_2, p_put, p_get, read_percentage, write_percentage, long_scan_percentage);
+		printf("N:%ld, U_1:%f, U_2:%f, p_put:%f, p_get:%f, read_percentage:%f, write_percentage:%f, rmw_percentage:%f, blind_update_percentage:%f, long_scan_percentage:%f\n", N, U_1, U_2, p_put, p_get, read_percentage, write_percentage, rmw_percentage, blind_update_percentage, long_scan_percentage);
 	}
 	while(temp)
 	{
-		printf("T=%d K=%d Z=%d L=%d Y=%d M=%f M_B=%f M_F=%f M_FP=%f M_BF=%f FPR_sum=%f update_cost:%f read_cost:%f long_scan_cost:%f total_cost:%f msg=%s\n", temp->T, temp->K, temp->Z, temp->L, temp->Y, temp->M/(1024*1024*1024), temp->M_B/(1024*1024*1024), temp->M_F/(1024*1024*1024), temp->M_FP/(1024*1024*1024), temp->M_BF/(1024*1024*1024), temp->FPR_sum, temp->update_cost, temp->read_cost, temp->long_scan_cost, temp->total_cost, temp->msg);
+		printf("T=%d K=%d Z=%d L=%d Y=%d M=%f M_B=%f M_F=%f M_FP=%f M_BF=%f FPR_sum=%f update_cost:%f read_cost:%f rmw_cost:%f blind_update_cost:%f long_scan_cost:%f total_cost:%f msg=%s\n", temp->T, temp->K, temp->Z, temp->L, temp->Y, temp->M/(1024*1024*1024), temp->M_B/(1024*1024*1024), temp->M_F/(1024*1024*1024), temp->M_FP/(1024*1024*1024), temp->M_BF/(1024*1024*1024), temp->FPR_sum, temp->update_cost, temp->read_cost, temp->rmw_cost, temp->blind_update_cost, temp->long_scan_cost, temp->total_cost, temp->msg);
 		temp = temp->down;
 	}
 	//printf("\n Total IOs:%f", (*d_list)->total_cost);

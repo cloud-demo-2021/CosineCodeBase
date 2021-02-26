@@ -7,4 +7,5 @@
 
 
 void analyzeLongScanCost(double* long_scan_cost, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_BF);
-void analyzeScanCostAvgCase(double* scan_cost, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_BF);
+void analyzeScanCostAvgCase(double* scan_cost, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_BF, double data);
+void analyzeEmptyScanCost(double* long_scan_empty_cost, int T, int K, int Z, int L, int Y, double M, double M_B, double M_F, double M_BF, double data);

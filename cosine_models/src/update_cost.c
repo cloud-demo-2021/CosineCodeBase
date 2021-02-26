@@ -110,16 +110,16 @@ double aggregateAvgCaseUpdate(int type, int T, int K, int Z, int L, int Y, doubl
 	return term1 + term2 + term3;
 }
 
-void analyzeUpdateCostAvgCase(double* update_cost, int T, int K, int Z, int L, int Y, double M, double M_F, double M_B, double data)
+void analyzeUpdateCostAvgCase(double* update_cost, int T, int K, int Z, int L, int Y, double M, double M_F, double M_B, double data, int C)
 {
 	if(Z == 0) // LSH-table append-only
 	{
 		double scale_up = 1.5;
 		double term1;
 		double c, q;
-		q = pow((1.0 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 1, data)), K);
-		c = (1 - q)*(1 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 0, data));
-		q = 1 - q*(1 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 0, data)); 
+		q = pow((1.0 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 1, data, -1)), K);
+		c = (1 - q)*(1 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 0, data, -1));
+		q = 1 - q*(1 - getAlpha_i(workload_type, M_B, 0.0, T, K, Z, L, Y, 0, data, -1)); 
 		term1 = c/q;
 		//printf("in DS: %f on disk: %f\n", q, c);
 		*update_cost = term1 *  scale_up;
@@ -130,16 +130,20 @@ void analyzeUpdateCostAvgCase(double* update_cost, int T, int K, int Z, int L, i
 		//printf("Hybrid log in FASTER\n");
 		double term1;
 		double c, q;
-		double alpha_mutable = getAlpha_i(workload_type, 0.9*M_B, 0.0, T, K, Z, L, Y, 0, data);
-		double alpha_read_only = getAlpha_i(workload_type, 0.1*M_B, 0.0, T, K, Z, L, Y, 0, data);	
+		double alpha_mutable = getAlpha_i(workload_type, 0.9*M_B, 0.0, T, K, Z, L, Y, 0, data, 1);
+		double alpha_read_only = getAlpha_i(workload_type, 0.1*M_B, 0.0, T, K, Z, L, Y, 0, data, -1);	
 		double alpha_0 = 1 - ((1 - alpha_mutable) * (1 - alpha_read_only));
 		//printf("alpha_mutable: %F, alpha_read_only: %f, alpha_0: %f\n", alpha_mutable, alpha_read_only, alpha_0);
-		q = pow((1.0 - getAlpha_i(workload_type, M_B, 0.0, T, K, 1, L, Y, 1, data)), K);
+		q = pow((1.0 - getAlpha_i(workload_type, M_B, 0.0, T, K, 1, L, Y, 1, data, -1)), K);
 		c = (1 - q)*(1 - alpha_0);
 		q = 1 - q*(1 - alpha_0); 
 		term1 = c/q;
 		//printf("in DS: %f on disk: %f\n", q, c);
 		*update_cost = term1;
+		if(term1 > (double)(1.0/B))
+		{
+			*update_cost = (double)(1.0/B);
+		}
 		return;
 	}
 	*update_cost = aggregateAvgCaseUpdate(workload_type, T, K, Z, L, Y, M_B, 0);

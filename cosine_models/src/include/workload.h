@@ -52,6 +52,9 @@ double read_percentage; // = 40;
 double write_percentage; // = 60;
 double short_scan_percentage; // = 0;
 double long_scan_percentage; // = 0;
+double long_scan_empty_percentage;
+double rmw_percentage;
+double blind_update_percentage;
 
 long int query_count; // = 4000000000;
 int s; //= 4096; // in entries, for long scan queries

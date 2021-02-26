@@ -21,6 +21,7 @@ void set_M_B(double* M_F, double* M_B, double M, double M_F_HI, double M_F_LO);
 void set_M_F(double* M_F, double* M_B, double M, double M_F_HI, double M_F_LO);
 
 void navigateDesignSpaceForContinuumSingleMachine(double M, double data, double workload, continuum_design** bucket, int compression_id);
-int getCostForExistingSystems(double M, double data, double workload, continuum_design** bucket, double cost, int provider_id, int compression_id);
+int getCostForExistingSystemsDefaultDesign(double M, double data, double workload, continuum_design** bucket, double cost, int provider_id, int compression_id);
+int getCostForExistingSystemsTunedDesign(double M, double data, double workload, continuum_design** bucket, double cost, int provider_id, int compression_id);
 
 

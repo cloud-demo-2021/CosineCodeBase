@@ -15,6 +15,7 @@ void initializeVMLibraries()
 	VM_libraries[0].name_of_instance = (char**)malloc(VM_libraries[0].no_of_instances*sizeof(char*));
 	VM_libraries[0].mem_of_instance = (double*)malloc(VM_libraries[0].no_of_instances*sizeof(double));
 	VM_libraries[0].rate_of_instance = (double*)malloc(VM_libraries[0].no_of_instances*sizeof(double));
+	VM_libraries[0].vCPU_of_instance = (int*)malloc(VM_libraries[0].no_of_instances*sizeof(int));
 
 	VM_libraries[0].name_of_instance[0] = "r5d.large";
 	VM_libraries[0].name_of_instance[1] = "r5d.xlarge";
@@ -37,12 +38,20 @@ void initializeVMLibraries()
 	VM_libraries[0].rate_of_instance[4] = 2.181;
 	VM_libraries[0].rate_of_instance[5] = 4.362;
 
+	VM_libraries[0].vCPU_of_instance[0] = 2;
+	VM_libraries[0].vCPU_of_instance[1] = 4;
+	VM_libraries[0].vCPU_of_instance[2] = 8;
+	VM_libraries[0].vCPU_of_instance[3] = 16;
+	VM_libraries[0].vCPU_of_instance[4] = 48;
+	VM_libraries[0].vCPU_of_instance[5] = 96;
+
 	/* ********************************** initialize VMs of GCP *********************************  */
 	VM_libraries[1].provider_name = "GCP";
 	VM_libraries[1].no_of_instances = 7;
 	VM_libraries[1].name_of_instance = (char**)malloc(VM_libraries[1].no_of_instances*sizeof(char*));
 	VM_libraries[1].mem_of_instance = (double*)malloc(VM_libraries[1].no_of_instances*sizeof(double));
 	VM_libraries[1].rate_of_instance = (double*)malloc(VM_libraries[1].no_of_instances*sizeof(double));
+	VM_libraries[1].vCPU_of_instance = (int*)malloc(VM_libraries[1].no_of_instances*sizeof(int));
 
 	VM_libraries[1].name_of_instance[0] = "n1-highmem-2";
 	VM_libraries[1].name_of_instance[1] = "n1-highmem-4";
@@ -68,12 +77,21 @@ void initializeVMLibraries()
 	VM_libraries[1].rate_of_instance[5] = 2.3849;
 	VM_libraries[1].rate_of_instance[6] = 3.5773;
 
+	VM_libraries[1].vCPU_of_instance[0] = 2;
+	VM_libraries[1].vCPU_of_instance[1] = 4;
+	VM_libraries[1].vCPU_of_instance[2] = 8;
+	VM_libraries[1].vCPU_of_instance[3] = 16;
+	VM_libraries[1].vCPU_of_instance[4] = 32;
+	VM_libraries[1].vCPU_of_instance[5] = 64;
+	VM_libraries[1].vCPU_of_instance[6] = 96;
+
 	/* ********************************** initialize VMs of AZURE *********************************  */
 	VM_libraries[2].provider_name = "AZURE";
 	VM_libraries[2].no_of_instances = 7;
 	VM_libraries[2].name_of_instance = (char**)malloc(VM_libraries[2].no_of_instances*sizeof(char*));
 	VM_libraries[2].mem_of_instance = (double*)malloc(VM_libraries[2].no_of_instances*sizeof(double));
 	VM_libraries[2].rate_of_instance = (double*)malloc(VM_libraries[2].no_of_instances*sizeof(double));
+	VM_libraries[2].vCPU_of_instance = (int*)malloc(VM_libraries[2].no_of_instances*sizeof(int));
 
 	VM_libraries[2].name_of_instance[0] = "E2 v3";
 	VM_libraries[2].name_of_instance[1] = "E4 v3";
@@ -99,6 +117,14 @@ void initializeVMLibraries()
 	VM_libraries[2].rate_of_instance[5] = 1.2512;
 	VM_libraries[2].rate_of_instance[6] = 2.5024;
 
+	VM_libraries[2].vCPU_of_instance[0] = 2;
+	VM_libraries[2].vCPU_of_instance[1] = 4;
+	VM_libraries[2].vCPU_of_instance[2] = 8;
+	VM_libraries[2].vCPU_of_instance[3] = 16;
+	VM_libraries[2].vCPU_of_instance[4] = 20;
+	VM_libraries[2].vCPU_of_instance[5] = 32;
+	VM_libraries[2].vCPU_of_instance[6] = 64;
+
 	printVMLibraries();
 }
 
@@ -110,7 +136,7 @@ void printVMLibraries()
 		printf("*********************** CLOUD PROVIDER: %s ***********************  \n", VM_libraries[i].provider_name);
 		for(int j = 0; j < VM_libraries[i].no_of_instances; j++)
 		{
-			printf("VM %s\t %f GB\t$%f/hour\n", VM_libraries[i].name_of_instance[j], VM_libraries[i].mem_of_instance[j], VM_libraries[i].rate_of_instance[j]);
+			printf("VM %s\t %f GB\t%d vCPUs\t$%f/hour\n", VM_libraries[i].name_of_instance[j], VM_libraries[i].mem_of_instance[j], VM_libraries[i].vCPU_of_instance[j], VM_libraries[i].rate_of_instance[j]);
 		}
 		printf("\n");
 	}

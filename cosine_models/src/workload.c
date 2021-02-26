@@ -25,10 +25,13 @@ void initWorkload()
 		workload_type = 0; // 0 is uniform, 1 is skew
 
 		query_count = 10000000000;
-		read_percentage = 20;
-		write_percentage = 80;
+		read_percentage = 50; // point lookups
+		write_percentage = 50; // inserts 
+		rmw_percentage = 0; // read-modify writes 
+		blind_update_percentage = 0; // blind updates
 		short_scan_percentage = 0;
-		long_scan_percentage = 0;
+		long_scan_percentage = 0; // range queries
+		long_scan_empty_percentage = 0; // empty range queries
 	}
 	no_of_windows = 1;
 	change_percent = 30;

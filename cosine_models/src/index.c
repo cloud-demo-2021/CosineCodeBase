@@ -21,6 +21,7 @@
 #include "include/compression_library.h"
 #include "include/SLA_factors.h"
 #include "include/experiments.h"
+#include "include/parallelism.h"
 
 double monthlyPrice(double hourly_price)
 {
@@ -194,7 +195,7 @@ void runSystem()
 	 	if(FitsInMemory(max_RAM_purchased*1024*1024*1024, N))
 		{
 			printf("\nTotal data volume %f fits in %f GB memory", ((double)N*E)/(1024*1024*1024), max_RAM_purchased);
-			logUpdateCost(&d_list, 0, 0, 0, 0, 0, max_RAM_purchased, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "Fits in memory");
+			logUpdateCost(&d_list, 0, 0, 0, 0, 0, max_RAM_purchased, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "Fits in memory");
 		}
 		while(M_B < max_RAM_purchased)
 		{
@@ -234,6 +235,7 @@ int main(int argc, char* argv[])
 		{
 			existing_system = argv[1];
 			printf("System: %s\n", existing_system);
+			enable_CLL = false;
 		}
 		clock_t start, end;
      	double cpu_time_used;
@@ -242,6 +244,8 @@ int main(int argc, char* argv[])
 		initializeSLAFactors();
 		initializeCompressionLibraries();
 		initWorkload();
+		assert(read_percentage + write_percentage + rmw_percentage + blind_update_percentage + short_scan_percentage + long_scan_percentage + long_scan_empty_percentage == 100);
+		setOverallProportionOfParallelizableCode();
 		getAllVMCombinations();
 		buildContinuum(); 
 		correctContinuum(); 

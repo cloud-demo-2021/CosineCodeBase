@@ -9,6 +9,7 @@
 #include "include/design_space_navigation.h"
 #include "include/compression_library.h"
 #include "include/SLA_factors.h"
+#include "include/parallelism.h"
 
 continuum_node* newContinuumNode(int provider_id, int* VM_arr, double mem_sum, int compression_id)
 {
@@ -38,8 +39,12 @@ void printContinuumNode(continuum_node* node)
 		printf("%d instances of %s\n", node->VM_arr[i], VM_libraries[node->provider_id].name_of_instance[i]);
 		if(node->VM_design_arr[i] != NULL)
 		{
+			if(enable_parallelism)
+			{
+				printf("Degrees of parallelism: %d\n", VM_libraries[node->provider_id].vCPU_of_instance[i]);
+			}
 			printf("#queries: %.0lf, #data entries: %.0lf\n", node->VM_design_arr[i]->workload_VM, node->VM_design_arr[i]->data_VM);
-			printf("Suggested design: T:%d K:%d Z:%d L:%d Y:%d M_B:%f M_BC:%f M_BF:%f M_FP:%f read_IO:%f update_IO:%f compression: %d\n", node->VM_design_arr[i]->T, node->VM_design_arr[i]->K, node->VM_design_arr[i]->Z, node->VM_design_arr[i]->L, node->VM_design_arr[i]->Y, node->VM_design_arr[i]->M_B/(1024*1024*1024), node->VM_design_arr[i]->M_BC/(1024*1024*1024), node->VM_design_arr[i]->M_BF/(1024*1024*1024), node->VM_design_arr[i]->M_FP/(1024*1024*1024), node->VM_design_arr[i]->read_cost, node->VM_design_arr[i]->update_cost, node->VM_design_arr[i]->compression_id);
+			printf("Suggested design: T:%d K:%d Z:%d L:%d Y:%d C:%d M_B:%f M_BC:%f M_BF:%f M_FP:%f read_IO:%f update_IO:%f rmw_IO:%f blind_update_IO:%f scan_IO:%f empty_scan_IO:%f compression: %d\n", node->VM_design_arr[i]->T, node->VM_design_arr[i]->K, node->VM_design_arr[i]->Z, node->VM_design_arr[i]->L, node->VM_design_arr[i]->Y, node->VM_design_arr[i]->C, node->VM_design_arr[i]->M_B/(1024*1024*1024), node->VM_design_arr[i]->M_BC/(1024*1024*1024), node->VM_design_arr[i]->M_BF/(1024*1024*1024), node->VM_design_arr[i]->M_FP/(1024*1024*1024), node->VM_design_arr[i]->read_cost, node->VM_design_arr[i]->update_cost, node->VM_design_arr[i]->rmw_cost, node->VM_design_arr[i]->blind_update_cost, node->VM_design_arr[i]->long_scan_cost, node->VM_design_arr[i]->long_scan_empty_cost, node->VM_design_arr[i]->compression_id);
 		}
 	}	
 	printf("Memory of the configuration: %f GB\n", node->mem_sum/(1024*1024*1024));
@@ -436,7 +441,14 @@ void buildContinuum()
 			}
 			else if(i == 1) // GCP
 			{
-				MBps = read_percentage*720/100 + write_percentage*160/100; // taking average
+				if(read_percentage == 0 && write_percentage == 0)
+				{
+					MBps = 50*720/100 + 50*160/100; // taking average
+				}
+				else
+				{
+					MBps = read_percentage*720/100 + write_percentage*160/100; // taking average	
+				}
 				B = 16*1024/(E);
 				IOPS = MBps*pow(10,6)/(B*E);
 				if(IOPS > 30000) 
@@ -529,7 +541,7 @@ void buildContinuum()
 		        evaluateConfiguration(i, VM_arr, mem_sum*1024*1024*1024, monthly_storage_cost, SLA_cost, compression_id);
 		        //printf("Done for configuration %d (%s)\n\n", config_id++, pricing_scheme);
 	   		}
-	   		//fclose(fp);
+			fclose(fp);
 			//printf("Done for %s\n", pricing_scheme);
 		}
 	}
@@ -546,6 +558,7 @@ void evaluateConfiguration(int provider_id, int* VM_arr, double mem_sum, double 
 	newnode->cost = monthly_storage_cost + SLA_cost; 
 	double dev_ops_cost = 0.0;
 	int VM_type;
+	double speedup;
 	for(int i = 0;i<VM_libraries[provider_id].no_of_instances;i++)
 	{
 	    if(VM_arr[i] != 0)
@@ -613,31 +626,40 @@ void evaluateConfiguration(int provider_id, int* VM_arr, double mem_sum, double 
 	        	if(!existing_system)
 	        	{
 	        		navigateDesignSpaceForContinuumSingleMachine(mem_VM, data_VM, workload_VM, &newnode->VM_design_arr[i], compression_id);
+					setDesignSpecificOverallProportionOfParallelizableCode(newnode->VM_design_arr[VM_type]->msg); // get design specific coefficients for Cosine
 	        	}
 	        	else
 	        	{
-	        		if(getCostForExistingSystems(mem_VM, data_VM, workload_VM, &newnode->VM_design_arr[i], newnode->cost, provider_id, compression_id) != 0)
+	        		//if(getCostForExistingSystemsTunedDesign(mem_VM, data_VM, workload_VM, &newnode->VM_design_arr[i], newnode->cost, provider_id, compression_id) != 0)
+	        		if(getCostForExistingSystemsDefaultDesign(mem_VM, data_VM, workload_VM, &newnode->VM_design_arr[i], newnode->cost, provider_id, compression_id) != 0)
 	        		{
 	        			continue;
 	        		}
 	        	}
 	        }
 	        newnode->total_IO += newnode->VM_design_arr[i]->total_cost;
+	        speedup = 1.0 / (1.0 - (overall_prop_parallelizable_code * (1.0 - (1.0/VM_libraries[provider_id].vCPU_of_instance[i]) ) ) );
 	    }
     }
     newnode->latency = newnode->total_IO/IOPS;
-    /* TAKE INTO ACCOUNT CPU EFFECTS */
+    /* TAKE INTO ACCOUNT CPU EFFECTS */  
+	/* rmw or blind_update support NOT ADDED HERE */
     if(using_compression == 1)
     {
     	newnode->latency = (newnode->VM_design_arr[VM_type]->read_cost*query_count*read_percentage/IOPS)*(100.0+compression_libraries[compression_id].get_overhead)/100
     					   + (newnode->VM_design_arr[VM_type]->update_cost*query_count*write_percentage/IOPS)*(100.0+compression_libraries[compression_id].put_overhead)/100;
     }
 
+    /* TAKE INTO ACCOUNT EFFECT OF PARALLELISM */
+    if(enable_parallelism)
+    {
+    	newnode->latency = newnode->latency/speedup;
+    }
 
     if(existing_system)
     {
     	//printf("%f\t%f\n", newnode->cost, newnode->total_IO);
-    	if(newnode->total_IO > 0.0000001)
+    	if(newnode->total_IO > 0.00000001)
     		addContinuumNode(newnode);
     }
     else
