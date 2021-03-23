@@ -10,6 +10,7 @@ In order to compile, you'll need to pre-install `make` and `gcc`. Then run,
 ## Running
 Run with `./build/a.out`. The default is a uniform workload with 10<sup>12</sup> entries, 10<sup>10</sup> queries (50% lookups and 50% inserts) which can be changed within `CosineCodeBase/cosine_models/src/workload.c`.
 
+If you want to get the continuum of existing storage engines, run with `./build/a.out rocks` for RocksDB or `./build/a.out WT` for WiredTiger or `./build/a.out FASTER_H` for FASTER.
 
 ## Interpretation of Output
 
