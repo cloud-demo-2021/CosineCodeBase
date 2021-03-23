@@ -50,7 +50,7 @@ enum compression_scheme compression_used;
 static int using_compression = 0;
 static int enable_SLA = 0;
 static char scenario = 'A'; // 'W' for worst-case, 'A' for avg-case
-static char execution_mode = 'C'; //'C' for continuum, 'N' for normal, 'P' for command line arguments
+static char execution_mode = 'C'; //'C' for continuum, 'N' for normal, 'P' for command line arguments, 'Q' for continuum with command line arguments 
 static int machines = 30;
 static bool enable_performance_window = false;
 static bool enable_parallelism = true;

@@ -18,6 +18,7 @@ void printContinuumExistingSystem()
 	{
 		continuum_node* head = p_continuum, *down;
 		int looking_for = 0, step = 5000;
+		double to_be_showed;
 		bool found = false;
 		while(head && !found)
 		{
@@ -47,7 +48,8 @@ void printContinuumExistingSystem()
 			 		//printf("Got: %f\t%f for %d\n", down->cost, down->latency, down->provider_id);
 			 		if(down->provider_id == 0)
 			 		{
-			 			printf("%f\t%f\t%f\n", down->cost, down->mem_sum/(1024*1024*1024), down->latency/(3600));
+			 			to_be_showed = ((int)(down->cost/step) + 1)*step;
+			 			printf("%f\t%f\t%f\n", to_be_showed, down->mem_sum/(1024*1024*1024), down->latency/(3600));
 						// printContinuumNode(down);
 			 			looking_for += step;
 			 			break;
@@ -65,7 +67,7 @@ void printContinuumCosine(bool entire)
 	if(!existing_system)
 	{
 		continuum_node* head = p_continuum, *temp, *best, *overall_best = p_continuum;
-		double looking_for = 5000, step = 5000;
+		double looking_for = 5000, step = 5000, to_be_showed;
 		while(head)
 		{
 			if(head->cost <= looking_for && head->next && head->next->cost > looking_for)
@@ -99,7 +101,8 @@ void printContinuumCosine(bool entire)
 					{
 						overall_best = best;
 					}
-					printf("%f\t%f (SLA)\t%f\t%s\t", best->cost, best->SLA_cost, best->latency/(3600), VM_libraries[best->provider_id].provider_name);
+					to_be_showed = ((int)(best->cost/step) + 1)*step;
+					printf("%f\t%f (SLA)\t%f\t%s\t", to_be_showed, best->SLA_cost, best->latency/(3600), VM_libraries[best->provider_id].provider_name);
 					for(int i = 0;i<VM_libraries[best->provider_id].no_of_instances;i++)
 					{
 						if(best->VM_design_arr[i] != NULL)

@@ -280,6 +280,66 @@ int main(int argc, char* argv[])
 		setMaxRAMNeeded();
 		runSystem();
 	}
+	else if(execution_mode == 'Q') // continuum with command line arguments 
+	{
+		if(argc > 15)
+		{
+			existing_system = argv[15];
+			printf("System: %s %d\n", existing_system, argc);
+			enable_CLL = false;
+		}
+		clock_t start, end;
+     	double cpu_time_used;
+     	start = clock();
+		initializeVMLibraries();
+		initializeSLAFactors();
+		initializeCompressionLibraries();
+
+	    N = atol(argv[1]);
+
+		query_count = atol(argv[2]);;
+		read_percentage = atof(argv[3]);; // point lookups
+		write_percentage = atof(argv[4]);; // inserts 
+		rmw_percentage = atof(argv[5]);; // read-modify writes 
+		blind_update_percentage = atof(argv[6]);; // blind updates
+		long_scan_percentage = atof(argv[7]);; // range queries
+		long_scan_empty_percentage = atof(argv[8]);; // empty range queries
+
+		workload_type = atoi(argv[9]); 
+
+		if(workload_type == 0)
+		{
+			U = atof(argv[10]); 
+		}
+		else
+		{
+			U_1 = atof(argv[11]); 
+			U_2 = atof(argv[12]);
+	    	p_put = atof(argv[13]);
+	    	p_get = atof(argv[14]);
+		}
+
+    	wl_var_set = true;
+
+		initWorkload();
+		assert(read_percentage + write_percentage + rmw_percentage + blind_update_percentage + short_scan_percentage + long_scan_percentage + long_scan_empty_percentage == 100);
+		setOverallProportionOfParallelizableCode();
+		getAllVMCombinations();
+		buildContinuum(); 
+		correctContinuum(); 
+	    end = clock();
+	    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC; // in second
+	    printf("\nContinuum built in %f second.\n",  cpu_time_used);
+	    //printContinuum(false);
+	    //printContinuumAtGap();
+
+	    // ***************** Experiments Block Begin ***************** 
+	    printContinuumExistingSystem();
+	    printContinuumCosine(false);
+	    // ***************** Experiments Block End ***************** 
+
+     	free(p_continuum);
+	}
 	else
 	{
 		// ./build/a.out AWS 40000 1000000000000 0 50 50 0 10000000000 100000000000000
